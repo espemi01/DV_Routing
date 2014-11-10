@@ -1,3 +1,4 @@
+# a cost of 0 means you are the host.
 
-class packet:
-	__init__()
+class DV_Table:
+	__init__(self, name, cost)
