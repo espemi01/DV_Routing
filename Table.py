@@ -3,13 +3,13 @@ from threading import Thread
 class Table: #holds the value pulled from the queue pushed from the socket
 
 	def __init__(self):
-		self.myName = ''
+		self.myName = 'mike'
 		self.DVT = {} 
 		self.NT = {}
 
-	def addSelf(self, name): #adding a value with the cost of 0 to signify this host is the sender to other nodes
-		self.myName = name
-		self.DVT[name] = [0, name]
+	def addSelf(self): #adding a value with the cost of 0 to signify this host is the sender to other nodes
+		self.myName = 'mike'
+		self.DVT[self.myName] = [0, self.myName]
 
 	def add(self, name, cost, ip): #appends a new node to the existing table
 		cost = int(cost)
@@ -24,7 +24,9 @@ class Table: #holds the value pulled from the queue pushed from the socket
 		total = cost + self.DVT[source][0]
 
 		if name in self.DVT:
-			if self.DVT[name][0] > total:
+			if name == 'mike':
+				return False
+			elif self.DVT[name][0] > total:
 				self.DVT[name] = [total, source]
 				return True
 			else:

@@ -8,7 +8,7 @@ class Router(Thread): #does all the processing
 		self.s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 		self.s.bind(("",50008))
 		self.t = Table.Table()
-		self.myName = ''
+		self.myName = 'mike'
 
 		self.t, self.name = self.makeTable(initFile)
 
@@ -23,11 +23,11 @@ class Router(Thread): #does all the processing
 
 			cost = int(cost)
 			if (cost == 0):
-				myName = name
-				self.t.addSelf(name)
+				self.t.addSelf()
 
 			else:
 				anIP = ip.strip()
+				cost = int(cost)
 				t.add(name, cost, anIP)
 
 		myFile.close()
@@ -49,11 +49,15 @@ class Router(Thread): #does all the processing
 					self.pushUpdate()
 
 			elif msgIN['type'] == 'message':
-				if self.destCh(msgIN):
+				if self.gotMessage(msgIN):
 					print("You Received: ", msgIN['message']['content'])
+					print("Path: ", msgIN['message']['path'])
+				elif len(msgIN['message']['path']) == 1:
+					self.sendMSG(msgIN)
 				else:
-					msgOUT, IPout = self.makeMSG(msgIN)
-					self.pushMSG(msgOUT, (IPout, 50007))
+					msgIN['message']['path'].append(self.myName)
+					self.fwdMSG(msgIN)
+					print("Message to ", msgIN['message']['destination'], " forwarded...")
 
 			elif msgIN['type'] == 'restart':
 				self.pushUpdate()
@@ -61,6 +65,10 @@ class Router(Thread): #does all the processing
 			else:
 				print ("JSON type: ", msgIN['type'], " is not a valid type")
 
+	def gotMessage(self, msg):
+		if msg['message']['destination'] == self.myName:
+			return True
+		return False
 
 	def restart(self):
 		msg = {'type': 'restart'}
@@ -91,13 +99,28 @@ class Router(Thread): #does all the processing
 		for i in t:
 			self.s.sendto(j,(t[i], 50007))
 
-	def makeMSG(self, msgIN):
-		msgIN['message']['path'].append(self.myName)
-		IPout = self.t.next(m['message']['destination'])
-		msgOUT = json.dumps(m)
-		return (msgOUT.encode('utf-8'), IPout)
+	def fwdMSG(self, msgIN):
+		destNAME = msgIN['message']['destination']
+		nextHop = self.t.DVT[destNAME][1]
+		print(nextHop)
 
-	def pushMSG(self, name, m):
-		msg = {'type': 'message', 'source' : self.myName, 'message' : {'content': m, 'destination' : name, 'path' : [self.myName]}}
-		self.s.sendto(json.dumps(msg), (name, 50007))
+		addr = self.t.NT[nextHop]
+		print(addr)
 
+		msgJSON = json.dumps(msgIN)
+		msgOUT = msgJSON.encode('utf-8')
+		print(msgOUT)
+		self.s.sendto(msgOUT, (addr, 50007))
+
+	def sendMSG(self, msgIN):
+		destNAME = msgIN['message']['destination']
+		nextHop = self.t.DVT[destNAME][1]
+		print(nextHop)
+
+		addr = self.t.NT[nextHop]
+		print(addr)
+
+		msgJSON = json.dumps(msgIN)
+		msgOUT = msgJSON.encode('utf-8')
+		print(msgOUT)
+		self.s.sendto(msgOUT, (addr, 50007))
